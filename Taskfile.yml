@@ -1,0 +1,33 @@
+version: "3"
+
+# Every task runs from the repository root with the Xcode toolchain selected
+# by xcode-select. No third-party tools: swift-format ships with Swift 6.
+
+tasks:
+  check:
+    desc: Everything CI and release gating run (lint, warning-free build, tests)
+    cmds:
+      - task: lint
+      - task: build
+      - task: test
+      - git diff --check
+
+  lint:
+    desc: swift-format lint in strict mode
+    cmds:
+      - swift format lint --strict --recursive Package.swift Sources Tests
+
+  format:
+    desc: Rewrite sources with swift-format
+    cmds:
+      - swift format format --in-place --recursive Package.swift Sources Tests
+
+  build:
+    desc: Build library and tests with warnings as errors
+    cmds:
+      - swift build --build-tests -Xswiftc -warnings-as-errors
+
+  test:
+    desc: Run the test suite
+    cmds:
+      - swift test
