@@ -1,0 +1,45 @@
+name: Validation
+
+# Validation only, through alexcatdad/ci-actions (pinned to a reviewed commit).
+# Nothing here tags, publishes or releases. Commands are the repository's own
+# Task targets; scripts/ci_setup.sh selects Xcode and installs Task on the
+# runner. The weekly schedule reruns the main contract and CodeQL.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions: {}
+
+jobs:
+  pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    uses: alexcatdad/ci-actions/.github/workflows/validate-pr.yml@828adfecbcbfb909d30fb0bc66459626571a1035
+    with:
+      runner: macos-26
+      lint-command: ./scripts/ci_setup.sh && task lint
+      build-command: ./scripts/ci_setup.sh && task build
+
+  main:
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    permissions:
+      contents: read
+    uses: alexcatdad/ci-actions/.github/workflows/validate-main.yml@828adfecbcbfb909d30fb0bc66459626571a1035
+    with:
+      runner: macos-26
+      test-command: ./scripts/ci_setup.sh && task test
+      security-command: ./scripts/ci_setup.sh && task security
+
+  codeql:
+    # The one allowed write scope: uploading code scanning results.
+    permissions:
+      contents: read
+      security-events: write
+    uses: alexcatdad/ci-actions/.github/workflows/codeql.yml@828adfecbcbfb909d30fb0bc66459626571a1035
+    with:
+      languages: '["swift", "actions"]'
+      swift-build-command: swift build

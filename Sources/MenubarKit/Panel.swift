@@ -171,7 +171,7 @@ public struct RefreshButton: View {
     }
 
     /// One full turn per second.
-    static func angle(at date: Date) -> Double {
+    nonisolated static func angle(at date: Date) -> Double {
         date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360
     }
 }

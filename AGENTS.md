@@ -54,12 +54,19 @@ should keep every app looking and behaving like Scratchpad.
 Requires Xcode with Swift 6 and [Task](https://taskfile.dev).
 
 ```sh
-task check   # lint + build + test + git diff --check
-task lint    # swift format lint --strict
-task build   # swift build --build-tests -Xswiftc -warnings-as-errors
-task test    # swift test
-task format  # swift format format --in-place
+task check     # lint + build + test + security + git diff --check
+task lint      # swift format lint --strict
+task build     # swift build --build-tests -Xswiftc -warnings-as-errors
+task test      # swift test
+task security  # scripts/check_security.sh: no dependencies, no subprocesses
+task format    # swift format format --in-place
 ```
+
+CI (`.github/workflows/validation.yml`) calls `alexcatdad/ci-actions` at a
+pinned commit: lint and build on pull requests, test and security on `main`
+and weekly, and CodeQL (`swift`, `actions`). `scripts/ci_setup.sh` selects
+Xcode and installs Task on the runner. CI validates only; it never tags or
+publishes.
 
 `UNUserNotificationCenter` needs a real app bundle, so tests drive
 `MenubarNotifier` through a fake `NotificationCenterClient`. SwiftUI views are

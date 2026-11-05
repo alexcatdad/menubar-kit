@@ -5,11 +5,12 @@ version: "3"
 
 tasks:
   check:
-    desc: Everything CI and release gating run (lint, warning-free build, tests)
+    desc: Everything CI and release gating run (lint, warning-free build, tests, security)
     cmds:
       - task: lint
       - task: build
       - task: test
+      - task: security
       - git diff --check
 
   lint:
@@ -31,3 +32,8 @@ tasks:
     desc: Run the test suite
     cmds:
       - swift test
+
+  security:
+    desc: Check the zero-dependency and no-subprocess invariants
+    cmds:
+      - ./scripts/check_security.sh

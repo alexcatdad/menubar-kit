@@ -5,6 +5,10 @@ All notable changes are listed here. Versions use CalVer `vYYYY.MM.DD.N`
 
 ## Unreleased
 
+### Added
+
+- CI through `alexcatdad/ci-actions` (lint, build, test, security, CodeQL) and a `task security` invariant check.
+
 ### Fixed
 
 - The attention badge now shows in the menu bar. `MenuBarExtra` renders only one image from its label, so
