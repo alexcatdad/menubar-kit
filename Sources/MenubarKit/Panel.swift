@@ -53,13 +53,22 @@ public struct StatusIcon: View {
 /// Read by VoiceOver as one element.
 public struct StatusHeader<Accessory: View>: View {
     private let tone: StatusTone
-    private let headline: String
-    private let detail: String
+    private let headline: AttributedString
+    private let detail: AttributedString
     private let accessory: Accessory
 
     /// A header with a trailing accessory, typically a `RefreshButton`.
     /// The accessory stays a separate VoiceOver element.
     public init(tone: StatusTone, headline: String, detail: String, @ViewBuilder accessory: () -> Accessory) {
+        self.init(
+            tone: tone, headline: AttributedString(headline), detail: AttributedString(detail), accessory: accessory)
+    }
+
+    /// A header with styled text, for example `InlineCode.attributed("Run `task check`")`.
+    public init(
+        tone: StatusTone, headline: AttributedString, detail: AttributedString,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
         self.tone = tone
         self.headline = headline
         self.detail = detail
@@ -81,7 +90,7 @@ public struct StatusHeader<Accessory: View>: View {
                 StatusIcon(tone: tone, size: 30, weight: .regular)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(headline).font(.headline)
-                    if !detail.isEmpty {
+                    if !detail.characters.isEmpty {
                         Text(detail)
                             .font(.callout).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -100,6 +109,11 @@ public struct StatusHeader<Accessory: View>: View {
 
 extension StatusHeader where Accessory == EmptyView {
     public init(tone: StatusTone, headline: String, detail: String) {
+        self.init(tone: tone, headline: headline, detail: detail) { EmptyView() }
+    }
+
+    /// A header with styled text, for example `InlineCode.attributed("Run `task check`")`.
+    public init(tone: StatusTone, headline: AttributedString, detail: AttributedString) {
         self.init(tone: tone, headline: headline, detail: detail) { EmptyView() }
     }
 
@@ -307,7 +321,7 @@ private struct MenuRowBody: View {
 }
 
 /// The panel's menu section: rows in `MenuRowButtonStyle`, with a divider
-/// and a Quit row at the end.
+/// and a Quit row at the end. The Quit row answers ⌘Q while the panel is open.
 public struct MenuSection<Content: View>: View {
     private let quitTitle: String?
     private let quitHelp: String?
@@ -328,6 +342,7 @@ public struct MenuSection<Content: View>: View {
             if let quitTitle {
                 Divider().padding(.vertical, 4).padding(.horizontal, 10)
                 Button(quitTitle) { NSApp.terminate(nil) }
+                    .keyboardShortcut("q", modifiers: .command)
                     .help(quitHelp ?? "")
             }
         }
@@ -353,18 +368,27 @@ public struct PrimaryActionButton: View {
 
 /// A secondary inline message, for example the last error.
 public struct PanelNotice: View {
-    private let message: String
+    private let message: AttributedString
     private let symbol: String
 
     public init(_ message: String, symbol: String = "exclamationmark.triangle") {
+        self.init(AttributedString(message), symbol: symbol)
+    }
+
+    /// A notice with styled text, for example `InlineCode.attributed(error)`.
+    public init(_ message: AttributedString, symbol: String = "exclamationmark.triangle") {
         self.message = message
         self.symbol = symbol
     }
 
     public var body: some View {
-        Label(message, systemImage: symbol)
-            .font(.caption).foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+        Label {
+            Text(message)
+        } icon: {
+            Image(systemName: symbol)
+        }
+        .font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

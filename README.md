@@ -42,6 +42,30 @@ Get the SHA with `git ls-remote https://github.com/alexcatdad/menubar-kit.git re
 Ship `MyAppTrayIcon.png` (18x18 px) and `MyAppTrayIcon@2x.png` (36x36 px),
 black on transparent, in the app's `Contents/Resources`.
 
+### Making the glyph
+
+`make-tray-glyph` writes both PNGs from an SF Symbol. Run it from a
+menu-bar-kit checkout (or the app's resolved copy under
+`.build/checkouts/menubar-kit`) and commit the output:
+
+```sh
+swift run --package-path path/to/menubar-kit make-tray-glyph \
+    --symbol pawprint.fill --name MyAppTrayIcon --output "$PWD/Resources" \
+    [--point-size 15] [--weight regular]
+```
+
+For a custom shape, call `TrayGlyphRenderer` from a test or script that
+imports MenubarKit. It draws in black into an 18x18pt rect (origin bottom left):
+
+```swift
+try TrayGlyphRenderer.write(baseName: "MyAppTrayIcon", to: resources) { rect in
+    NSBezierPath(roundedRect: rect.insetBy(dx: 2, dy: 3), xRadius: 3, yRadius: 3).fill()
+}
+```
+
+Xcode projects: set `COMBINE_HIDPI_IMAGES = NO`, or Xcode merges the pair
+into a TIFF and `TrayIconLoader` fails closed to the fallback symbol.
+
 ```swift
 import MenubarKit
 import SwiftUI
@@ -96,6 +120,31 @@ struct PanelView: View {
 }
 ```
 
+`MenuSection`'s Quit row answers ⌘Q while the panel is open.
+
+Lists of things the user can open (routes, devices, pull requests) use
+`ListRowButton` inside a grouped tile:
+
+```swift
+VStack(spacing: 0) {
+    ForEach(model.routes) { route in
+        ListRowButton(route.name, subtitle: route.url, tone: route.tone, value: route.port) {
+            NSWorkspace.shared.open(route.link)
+        }
+    }
+}
+.groupedTile()
+```
+
+Helper and CLI messages often quote commands in backticks. Pass them through
+`InlineCode.attributed(_:)` to show those spans as inline code. Only
+backticks are interpreted, so paths with `*` or `_` stay literal:
+
+```swift
+StatusHeader(tone: .error, headline: "Helper stopped", detail: InlineCode.attributed(model.lastError))
+PanelNotice(InlineCode.attributed("Run `up doctor` to check the CA."))
+```
+
 `MenubarStatus(tone:word:headline:detail:)` drives both the label and the
 header. Tones: `.ok`, `.warning`, `.error`, `.off`, `.update`. The accent
 defaults to Scratchpad amber; override with `.menubarTheme(MenubarTheme(...))`.
@@ -144,6 +193,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 `presentInForeground` (default `false`) controls whether banners show while
 the app is active.
+
+`requestPermission()` is the throwing form of `userEnabledNotifications()`:
+it surfaces the error macOS returned and refuses a second request while one is
+open (`PermissionRequestError.alreadyInProgress`). `permissionUpdates()`
+yields the permission now and on every change (for example after the user
+changes it in System Settings); iterate it in a view's `.task`. `deliver`
+returns `.cancelled` without posting if its task is cancelled.
+
+## Settings
+
+`SettingsForm` is the shared Settings layout (a grouped form, 460pt wide).
+`NotificationSettingsSection` is the whole opt-in: the toggle, an optional
+sound toggle, a note that follows macOS permission live, and a button to
+System Settings when notifications are blocked.
+
+```swift
+Settings {
+    SettingsForm {
+        NotificationSettingsSection(
+            notifier: model.notifier,
+            toggleTitle: "Notify me when a project goes live",
+            explanation: "Silent unless you turn on the sound."
+        )
+        Section("Startup") {
+            Toggle("Launch at login", isOn: $launchAtLogin)
+            SettingsNote("Dev builds never register a login item.")
+        }
+        SettingsAboutSection(note: "MyApp never uploads your data.", repository: URL(string: "https://github.com/alexcatdad/myapp"))
+    }
+}
+```
 
 ## Incident de-duplication
 
