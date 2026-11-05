@@ -51,36 +51,128 @@ public struct StatusIcon: View {
 
 /// The panel's top section: 30pt tone symbol, headline and detail.
 /// Read by VoiceOver as one element.
-public struct StatusHeader: View {
+public struct StatusHeader<Accessory: View>: View {
     private let tone: StatusTone
     private let headline: String
     private let detail: String
+    private let accessory: Accessory
 
-    public init(tone: StatusTone, headline: String, detail: String) {
+    /// A header with a trailing accessory, typically a `RefreshButton`.
+    /// The accessory stays a separate VoiceOver element.
+    public init(tone: StatusTone, headline: String, detail: String, @ViewBuilder accessory: () -> Accessory) {
         self.tone = tone
         self.headline = headline
         self.detail = detail
+        self.accessory = accessory()
+    }
+
+    /// - Parameter detailOverride: Shown instead of `status.detail`, for example a running activity.
+    public init(
+        _ status: MenubarStatus, detailOverride: String? = nil, @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.init(
+            tone: status.tone, headline: status.headline, detail: detailOverride ?? status.detail,
+            accessory: accessory)
+    }
+
+    public var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                StatusIcon(tone: tone, size: 30, weight: .regular)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(headline).font(.headline)
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .accessibilityElement(children: .combine)
+            if Accessory.self != EmptyView.self {
+                Spacer(minLength: 0)
+                accessory
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
+extension StatusHeader where Accessory == EmptyView {
+    public init(tone: StatusTone, headline: String, detail: String) {
+        self.init(tone: tone, headline: headline, detail: detail) { EmptyView() }
     }
 
     /// - Parameter detailOverride: Shown instead of `status.detail`, for example a running activity.
     public init(_ status: MenubarStatus, detailOverride: String? = nil) {
-        self.init(tone: status.tone, headline: status.headline, detail: detailOverride ?? status.detail)
+        self.init(status, detailOverride: detailOverride) { EmptyView() }
+    }
+}
+
+/// A borderless icon button for the panel header, highlighted on hover and press.
+public struct HeaderIconButtonStyle: ButtonStyle {
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
+        HeaderIconButtonBody(configuration: configuration)
+    }
+}
+
+private struct HeaderIconButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @State private var hovering = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .frame(width: 26, height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.primary.opacity(configuration.isPressed ? 0.12 : hovering && isEnabled ? 0.07 : 0))
+            )
+            .opacity(isEnabled ? 1 : 0.6)
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+    }
+}
+
+/// The panel header's refresh control: `arrow.clockwise` that spins while
+/// `isRefreshing` is true (a static spinner with Reduce Motion) and is
+/// disabled meanwhile. VoiceOver reads "Refresh" or "Refreshing".
+public struct RefreshButton: View {
+    private let isRefreshing: Bool
+    private let title: String
+    private let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    public init(isRefreshing: Bool, title: String = "Refresh", action: @escaping () -> Void) {
+        self.isRefreshing = isRefreshing
+        self.title = title
+        self.action = action
     }
 
     public var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            StatusIcon(tone: tone, size: 30, weight: .regular)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(headline).font(.headline)
-                if !detail.isEmpty {
-                    Text(detail)
-                        .font(.callout).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        Button(action: action) {
+            if isRefreshing && reduceMotion {
+                ProgressView().controlSize(.small)
+            } else {
+                TimelineView(.animation(paused: !isRefreshing)) { context in
+                    Image(systemName: "arrow.clockwise")
+                        .rotationEffect(.degrees(isRefreshing ? Self.angle(at: context.date) : 0))
                 }
             }
         }
-        .accessibilityElement(children: .combine)
-        .padding(.horizontal, 4)
+        .buttonStyle(HeaderIconButtonStyle())
+        .disabled(isRefreshing)
+        .help(title)
+        .accessibilityLabel(isRefreshing ? "Refreshing" : title)
+    }
+
+    /// One full turn per second.
+    static func angle(at date: Date) -> Double {
+        date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360
     }
 }
 

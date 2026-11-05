@@ -6,7 +6,9 @@ import SwiftUI
 /// - The glyph never changes: the 18pt template image, or `fallbackSymbol`
 ///   when the image could not be loaded.
 /// - When the tone is not `.ok`, a heavy 9pt `exclamationmark` badge follows
-///   the glyph, so attention is a visible mark, not just a colour change.
+///   the glyph, so attention is a visible mark, not just a colour change. The
+///   badge is drawn into the same template image (see `TrayIconComposer`)
+///   because `MenuBarExtra` drops any second image in its label.
 /// - Development builds show a "DEV" caption.
 /// - VoiceOver reads one element: "<App>, <status word>".
 public struct TrayLabel: View {
@@ -50,20 +52,11 @@ public struct TrayLabel: View {
     }
 
     public var body: some View {
+        // MenuBarExtra shows only one image from its label, so the badge is
+        // composited into the glyph's template image instead of laid out beside it.
         HStack(spacing: 3) {
-            if let icon {
-                Image(nsImage: icon)
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: TrayIconLoader.logicalSize.width, height: TrayIconLoader.logicalSize.height)
-            } else {
-                Image(systemName: fallbackSymbol)
-            }
-            if tone.needsAttention {
-                Image(systemName: "exclamationmark")
-                    .font(.system(size: 9, weight: .heavy))
-            }
+            Image(nsImage: TrayIconComposer.image(icon: icon, fallbackSymbol: fallbackSymbol, tone: tone))
+                .renderingMode(.template)
             if isDevelopment {
                 Text("DEV").font(.caption2.weight(.semibold))
             }

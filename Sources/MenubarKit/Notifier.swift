@@ -4,17 +4,30 @@ import UserNotifications
 /// A notification to post through `MenubarNotifier`.
 public struct MenubarNotification: Equatable, Sendable {
     public var title: String
+    /// A secondary line under the title, for example "owner/repo #42".
+    public var subtitle: String?
     public var body: String
     /// Groups related notifications in Notification Center, for example one thread per incident kind.
     public var threadIdentifier: String?
     /// Reusing an identifier replaces the earlier notification instead of stacking a new one.
     public var identifier: String
+    /// Returned to the click handler (`NotificationClick.userInfo`), for example a URL or record ID to open.
+    public var userInfo: [String: String]
 
-    public init(title: String, body: String, threadIdentifier: String? = nil, identifier: String = UUID().uuidString) {
+    public init(
+        title: String,
+        subtitle: String? = nil,
+        body: String,
+        threadIdentifier: String? = nil,
+        identifier: String = UUID().uuidString,
+        userInfo: [String: String] = [:]
+    ) {
         self.title = title
+        self.subtitle = subtitle
         self.body = body
         self.threadIdentifier = threadIdentifier
         self.identifier = identifier
+        self.userInfo = userInfo
     }
 }
 
@@ -97,15 +110,25 @@ public struct SystemNotificationCenter: NotificationCenterClient {
     }
 
     public func add(_ notification: MenubarNotification, playSound: Bool) async throws {
+        let content = Self.content(for: notification, playSound: playSound)
+        let request = UNNotificationRequest(identifier: notification.identifier, content: content, trigger: nil)
+        try await UNUserNotificationCenter.current().add(request)
+    }
+
+    /// The content posted for `notification`. Silent unless `playSound` is true.
+    public static func content(for notification: MenubarNotification, playSound: Bool) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = notification.title
+        if let subtitle = notification.subtitle {
+            content.subtitle = subtitle
+        }
         content.body = notification.body
         if let thread = notification.threadIdentifier {
             content.threadIdentifier = thread
         }
+        content.userInfo = notification.userInfo
         content.sound = playSound ? .default : nil
-        let request = UNNotificationRequest(identifier: notification.identifier, content: content, trigger: nil)
-        try await UNUserNotificationCenter.current().add(request)
+        return content
     }
 }
 

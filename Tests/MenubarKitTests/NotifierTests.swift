@@ -109,3 +109,47 @@ private let sample = MenubarNotification(
     #expect(NotificationPermission(.denied) == .denied)
     #expect(NotificationPermission(.notDetermined) == .notDetermined)
 }
+
+@Test func subtitleAndUserInfoReachTheContent() {
+    let notification = MenubarNotification(
+        title: "Review requested", subtitle: "owner/repo #42", body: "Fix the thing",
+        threadIdentifier: "PR_1", identifier: "n1", userInfo: ["url": "https://example.com/pr/42"])
+    let content = SystemNotificationCenter.content(for: notification, playSound: false)
+    #expect(content.title == "Review requested")
+    #expect(content.subtitle == "owner/repo #42")
+    #expect(content.body == "Fix the thing")
+    #expect(content.threadIdentifier == "PR_1")
+    #expect(content.userInfo as? [String: String] == ["url": "https://example.com/pr/42"])
+    #expect(content.sound == nil)
+    #expect(SystemNotificationCenter.content(for: notification, playSound: true).sound != nil)
+}
+
+@Test func existingInitializerStillCompilesWithEmptyExtras() {
+    let notification = MenubarNotification(title: "t", body: "b", threadIdentifier: "x", identifier: "i")
+    #expect(notification.subtitle == nil)
+    #expect(notification.userInfo.isEmpty)
+    #expect(SystemNotificationCenter.content(for: notification, playSound: false).subtitle == "")
+}
+
+@Test func foregroundPresentationIsOffByDefault() {
+    let quiet = MenubarNotificationResponder { _ in }
+    #expect(quiet.foregroundPresentationOptions.isEmpty)
+    let loud = MenubarNotificationResponder(presentInForeground: true) { _ in }
+    #expect(loud.foregroundPresentationOptions.contains(.banner))
+    #expect(loud.foregroundPresentationOptions.contains(.list))
+}
+
+@MainActor
+@Test func clicksReachTheHandlerWithUserInfo() {
+    var received: [NotificationClick] = []
+    let responder = MenubarNotificationResponder { received.append($0) }
+    let click = NotificationClick(identifier: "n1", threadIdentifier: "PR_1", userInfo: ["url": "u"])
+    responder.handle(click)
+    #expect(received == [click])
+    #expect(!click.isDismissal)
+}
+
+@Test func clickUserInfoKeepsOnlyStrings() {
+    let raw: [AnyHashable: Any] = ["url": "u", "count": 3, 7: "x"]
+    #expect(NotificationClick.stringUserInfo(raw) == ["url": "u"])
+}

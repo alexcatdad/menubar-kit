@@ -38,3 +38,9 @@ import Testing
     #expect(MenubarMetrics.panelWidth == 340)
     #expect(MenubarMetrics.trayIconSize == TrayIconLoader.logicalSize.width)
 }
+
+@Test func refreshSpinnerTurnsOncePerSecond() {
+    let base = Date(timeIntervalSinceReferenceDate: 1000)
+    #expect(RefreshButton.angle(at: base) == 0)
+    #expect(abs(RefreshButton.angle(at: base.addingTimeInterval(0.25)) - 90) < 0.001)
+}
