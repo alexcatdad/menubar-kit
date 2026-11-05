@@ -5,7 +5,8 @@ alexcatdad's macOS menu bar apps (Scratchpad, paw-proxy, pr-nanny, usb-boop).
 Extracted from Scratchpad, which is the reference look and feel.
 
 - 18pt template tray glyph that never changes shape, a heavy attention badge
-  for any non-OK state, a DEV caption, and a VoiceOver label of
+  for any non-OK state (drawn into the same template image, since
+  `MenuBarExtra` shows only one image), a DEV caption, and a VoiceOver label of
   "<App>, <status>".
 - Five status tones, each with its own SF Symbol, so state never depends on
   colour alone.
@@ -75,7 +76,9 @@ struct PanelView: View {
 
     var body: some View {
         MenubarPanel {
-            StatusHeader(model.status)
+            StatusHeader(model.status) {
+                RefreshButton(isRefreshing: model.isRefreshing) { model.refresh() }
+            }
             StatusRowsTile([
                 MenubarStatusRow(title: "Service", value: "Running", tone: .ok),
                 MenubarStatusRow(title: "Server", value: "Unreachable", tone: .warning),
@@ -85,7 +88,7 @@ struct PanelView: View {
             }
             MenuSection(quitTitle: "Quit MyApp") {
                 Button("Open MyApp") { model.openWindow() }
-                Button("Settings…") { model.openSettings() }
+                OpenSettingsButton()  // activates the LSUIElement app, opens Settings, brings it front
             }
             VersionFooter()
         }
@@ -125,6 +128,22 @@ await notifier.deliver(MenubarNotification(
     threadIdentifier: "outage"
 ))
 ```
+
+Optional extras: `subtitle`, and `userInfo` that comes back on click. To
+handle clicks, install a responder once at launch and keep it alive:
+
+```swift
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    let responder = MenubarNotificationResponder(presentInForeground: false) { click in
+        guard !click.isDismissal, let url = click.userInfo["url"].flatMap(URL.init(string:)) else { return }
+        NSWorkspace.shared.open(url)
+    }
+    func applicationDidFinishLaunching(_ notification: Notification) { responder.install() }
+}
+```
+
+`presentInForeground` (default `false`) controls whether banners show while
+the app is active.
 
 ## Incident de-duplication
 

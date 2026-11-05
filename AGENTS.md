@@ -18,13 +18,15 @@ should keep every app looking and behaving like Scratchpad.
 - Every `StatusTone` has its own SF Symbol shape. Meaning is never conveyed by
   colour alone; colour only reinforces the shape.
 - The tray glyph never changes. Any tone other than `.ok` adds the heavy 9pt
-  `exclamationmark` badge. VoiceOver reads exactly "<App>, <status word>".
+  `exclamationmark` badge, composited into the same template image because
+  `MenuBarExtra` drops a second image in its label. VoiceOver reads exactly "<App>, <status word>".
 - Notifications only go through `UNUserNotificationCenter` so they are
   attributed to the app bundle. Never `osascript`, `sh`, `terminal-notifier`
   or any other process.
 - Notifications are opt-in (default off). Permission (`[.alert, .sound]` only)
   is requested only from a user action. Every delivery re-checks the user's
   toggle and macOS permission. Delivery is silent unless the app enables sound.
+  Click handling and foreground presentation are opt-in; foreground is off by default.
 - The incident de-duplicator reports one incident and at most one recovery per
   condition, and recovery only after a reported incident.
 - Keep app-specific wording and state mapping in the apps, not here.
@@ -36,10 +38,13 @@ should keep every app looking and behaving like Scratchpad.
 - `Sources/MenubarKit/StatusTone.swift`: `StatusTone`, `MenubarStatus`, `MenubarStatusRow`, `VersionLabel`,
   `TrayAccessibility`.
 - `Sources/MenubarKit/Theme.swift`: `MenubarTheme` (accent, accent ink, ink; Scratchpad amber default).
+- `Sources/MenubarKit/TrayIconComposer.swift`: glyph + badge composited into one template image.
 - `Sources/MenubarKit/TrayLabel.swift`: the `MenuBarExtra` label view.
-- `Sources/MenubarKit/Panel.swift`: 340pt panel building blocks and button styles.
+- `Sources/MenubarKit/Panel.swift`: 340pt panel building blocks, button styles and `RefreshButton`.
 - `Sources/MenubarKit/Notifier.swift`: `MenubarNotifier`, `NotificationCenterClient`,
   `SystemNotificationCenter`, preferences.
+- `Sources/MenubarKit/NotificationResponder.swift`: opt-in click/foreground delegate.
+- `Sources/MenubarKit/SettingsOpener.swift`: open the Settings scene from an LSUIElement app.
 - `Sources/MenubarKit/IncidentDeduplicator.swift`: incident/recovery coalescing.
 - `Tests/MenubarKitTests/`: Swift Testing suites; `Fixtures/` holds tray PNGs (excluded from the target, read via
   `#filePath`).

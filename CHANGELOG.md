@@ -5,6 +5,22 @@ All notable changes are listed here. Versions use CalVer `vYYYY.MM.DD.N`
 
 ## Unreleased
 
+### Fixed
+
+- The attention badge now shows in the menu bar. `MenuBarExtra` renders only one image from its label, so
+  `TrayLabel` draws the glyph and badge into a single template image (`TrayIconComposer`).
+
+### Added
+
+- `MenubarNotification.subtitle` and `userInfo` (`[String: String]`); `SystemNotificationCenter.content(for:playSound:)`.
+- `MenubarNotificationResponder`: opt-in `UNUserNotificationCenterDelegate` that hands clicks (`NotificationClick`
+  with `userInfo`) to the app on the main actor; foreground presentation is opt-in and off by default.
+- `OpenSettingsButton` and `SettingsOpener`: open the `Settings` scene from an LSUIElement app (activate, open,
+  bring to front) on macOS 13 and 14+.
+- `RefreshButton` and `HeaderIconButtonStyle`; `StatusHeader` takes an optional trailing `accessory`.
+
+### Initial extraction
+
 ### Added
 
 - `TrayIconLoader`: 18x18pt template image from `<name>.png` / `<name>@2x.png`, failing closed on missing,
