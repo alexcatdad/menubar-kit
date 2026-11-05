@@ -8,6 +8,23 @@ All notable changes are listed here. Versions use CalVer `vYYYY.MM.DD.N`
 ### Added
 
 - CI through `alexcatdad/ci-actions` (lint, build, test, security, CodeQL) and a `task security` invariant check.
+- `MenuSection`'s Quit row answers ⌘Q.
+- `MenubarNotifier.requestPermission()` throws the error macOS returned instead of reporting `.denied`, and
+  `PermissionRequestError.alreadyInProgress` while another request is open; `isRequestingPermission`.
+  `userEnabledNotifications()` uses it and keeps its old results.
+- `MenubarNotifier.permissionUpdates(every:)`: the permission now and on every change, for Settings views.
+- `deliver` returns `DeliveryOutcome.cancelled` (a `.failed("cancelled")` constant, so existing switches still
+  compile) when the task is cancelled, including between the permission check and posting.
+- `ListRowButton` and `ListRowButtonStyle`: a clickable two-line row (title, subtitle, optional icon and value)
+  with hover.
+- `StatusHeader` and `PanelNotice` accept `AttributedString`; `InlineCode.attributed(_:)` turns backtick spans
+  into inline code without interpreting other Markdown.
+- `SettingsForm`, `SettingsNote`, `NotificationSettingsSection` (toggle, sound, live permission note, link to
+  System Settings) and `SettingsAboutSection`.
+- `TrayGlyphRenderer` and the `make-tray-glyph` executable write the 1x/2x tray PNGs from an SF Symbol or a
+  custom drawing.
+
+## v2026.11.05.1
 
 ### Fixed
 

@@ -5,11 +5,17 @@ let package = Package(
     name: "MenubarKit",
     platforms: [.macOS(.v13)],
     products: [
-        .library(name: "MenubarKit", targets: ["MenubarKit"])
+        .library(name: "MenubarKit", targets: ["MenubarKit"]),
+        .executable(name: "make-tray-glyph", targets: ["make-tray-glyph"]),
     ],
     targets: [
         .target(
             name: "MenubarKit",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .executableTarget(
+            name: "make-tray-glyph",
+            dependencies: ["MenubarKit"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(

@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import os
 
 /// A notification to post through `MenubarNotifier`.
 public struct MenubarNotification: Equatable, Sendable {
@@ -84,6 +85,16 @@ public enum DeliveryOutcome: Equatable, Sendable {
     /// macOS permission is missing or was revoked since the toggle was turned on.
     case notAuthorized
     case failed(String)
+
+    /// The calling task was cancelled before anything was posted. Compare with
+    /// `==` or match with `case .cancelled:`.
+    public static let cancelled = DeliveryOutcome.failed("cancelled")
+}
+
+/// Why `MenubarNotifier.requestPermission()` did not return a permission.
+public enum PermissionRequestError: Error, Equatable, Sendable {
+    /// Another permission request from this notifier has not finished yet.
+    case alreadyInProgress
 }
 
 /// The system calls `MenubarNotifier` needs. Production uses
@@ -138,10 +149,12 @@ public struct SystemNotificationCenter: NotificationCenterClient {
 /// - Permission is requested only from that toggle, via `userEnabledNotifications()`.
 /// - Every delivery re-reads the preferences and re-checks macOS permission,
 ///   so revoking either takes effect immediately.
+/// - One permission request at a time; a cancelled delivery posts nothing.
 /// - Silent unless `NotificationPreferences.soundEnabled` is true.
 public final class MenubarNotifier: Sendable {
     private let center: any NotificationCenterClient
     private let preferences: @Sendable () -> NotificationPreferences
+    private let requestGate = OSAllocatedUnfairLock(initialState: false)
 
     /// - Parameters:
     ///   - center: Defaults to `SystemNotificationCenter()`.
@@ -162,22 +175,77 @@ public final class MenubarNotifier: Sendable {
     /// Call from the user's toggle when it is turned on. Prompts for
     /// `[.alert, .sound]` if macOS has not asked yet, then reports the result.
     /// When the toggle is turned off, call `permission()` instead.
+    ///
+    /// A failed request reads as `.denied` and a request made while another is
+    /// still open reads as the current permission. Use `requestPermission()`
+    /// to see either case.
     public func userEnabledNotifications() async -> NotificationPermission {
-        let current = await permission()
-        guard current == .notDetermined else { return current }
         do {
-            return try await center.requestAuthorization() ? .authorized : .denied
+            return try await requestPermission()
+        } catch PermissionRequestError.alreadyInProgress {
+            return await permission()
         } catch {
             return .denied
         }
     }
 
+    /// Like `userEnabledNotifications()`, but reports failures instead of
+    /// collapsing them to `.denied`.
+    ///
+    /// - Throws: `PermissionRequestError.alreadyInProgress` while another
+    ///   request from this notifier is open (macOS shows one prompt; a second
+    ///   call would race it), or the error macOS returned for the request.
+    public func requestPermission() async throws -> NotificationPermission {
+        let current = await permission()
+        guard current == .notDetermined else { return current }
+        guard
+            requestGate.withLock({ inFlight in
+                if inFlight { return false }
+                inFlight = true
+                return true
+            })
+        else { throw PermissionRequestError.alreadyInProgress }
+        defer { requestGate.withLock { $0 = false } }
+        return try await center.requestAuthorization() ? .authorized : .denied
+    }
+
+    /// Whether a permission request from this notifier is open.
+    public var isRequestingPermission: Bool {
+        requestGate.withLock { $0 }
+    }
+
+    /// The current permission now, then again each time it changes, for
+    /// example after the user changes it in System Settings. macOS has no
+    /// change callback, so this re-reads it every `interval`. Iterate it in a
+    /// view's `.task` so polling stops when the view goes away.
+    public func permissionUpdates(every interval: Duration = .seconds(2)) -> AsyncStream<NotificationPermission> {
+        AsyncStream { continuation in
+            let task = Task {
+                var last: NotificationPermission?
+                while !Task.isCancelled {
+                    let current = await permission()
+                    if current != last {
+                        last = current
+                        continuation.yield(current)
+                    }
+                    try? await Task.sleep(for: interval)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Posts `notification` if the user enabled notifications and macOS still allows them.
+    /// Returns `.cancelled` without posting if the calling task is cancelled,
+    /// including while the permission check is in flight.
     @discardableResult
     public func deliver(_ notification: MenubarNotification) async -> DeliveryOutcome {
+        guard !Task.isCancelled else { return .cancelled }
         let prefs = preferences()
         guard prefs.enabled else { return .disabled }
         guard await permission() == .authorized else { return .notAuthorized }
+        guard !Task.isCancelled else { return .cancelled }
         do {
             try await center.add(notification, playSound: prefs.soundEnabled)
             return .delivered
