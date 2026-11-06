@@ -7,6 +7,8 @@ All notable changes are listed here. Versions use CalVer `vYYYY.MM.DD.N`
 
 ### Added
 
+- An 87% line-coverage floor on `MenubarKit` in `task test` (`scripts/coverage.sh`), and render tests for the
+  panel, list-row, settings and tray views.
 - CI through `alexcatdad/ci-actions` (lint, build, test, security, CodeQL) and a `task security` invariant check.
 - `MenuSection`'s Quit row answers ⌘Q.
 - `MenubarNotifier.requestPermission()` throws the error macOS returned instead of reporting `.denied`, and

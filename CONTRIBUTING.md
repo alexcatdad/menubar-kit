@@ -12,7 +12,8 @@ task check
 ```
 
 That runs `swift format lint --strict`, a warnings-as-errors build of library
-and tests, `swift test` and `git diff --check`. Use `task format` to fix
+and tests, `swift test` with an 87% line-coverage floor on `MenubarKit`
+(`scripts/coverage.sh`) and `git diff --check`. Use `task format` to fix
 formatting.
 
 - Keep zero third-party dependencies, including test-only ones.

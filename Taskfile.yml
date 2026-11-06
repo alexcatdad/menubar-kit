@@ -29,9 +29,9 @@ tasks:
       - swift build --build-tests -Xswiftc -warnings-as-errors
 
   test:
-    desc: Run the test suite
+    desc: Run the test suite (warnings as errors) with the MenubarKit line-coverage floor
     cmds:
-      - swift test
+      - ./scripts/coverage.sh
 
   security:
     desc: Check the zero-dependency and no-subprocess invariants
