@@ -57,7 +57,7 @@ Requires Xcode with Swift 6 and [Task](https://taskfile.dev).
 task check     # lint + build + test + security + git diff --check
 task lint      # swift format lint --strict
 task build     # swift build --build-tests -Xswiftc -warnings-as-errors
-task test      # swift test
+task test      # swift test with the 87% MenubarKit line-coverage floor
 task security  # scripts/check_security.sh: no dependencies, no subprocesses
 task format    # swift format format --in-place
 ```
