@@ -18,17 +18,18 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
-    uses: alexcatdad/ci-actions/.github/workflows/validate-pr.yml@828adfecbcbfb909d30fb0bc66459626571a1035
+    uses: alexcatdad/ci-actions/.github/workflows/validate-pr.yml@515066dac791f5a1222cfc99be038c220980ce23
     with:
       runner: macos-26
       lint-command: ./scripts/ci_setup.sh && task lint
       build-command: ./scripts/ci_setup.sh && task build
+      test-command: ./scripts/ci_setup.sh && task test
 
   main:
     if: github.event_name == 'push' || github.event_name == 'schedule'
     permissions:
       contents: read
-    uses: alexcatdad/ci-actions/.github/workflows/validate-main.yml@828adfecbcbfb909d30fb0bc66459626571a1035
+    uses: alexcatdad/ci-actions/.github/workflows/validate-main.yml@515066dac791f5a1222cfc99be038c220980ce23
     with:
       runner: macos-26
       test-command: ./scripts/ci_setup.sh && task test
@@ -39,7 +40,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: alexcatdad/ci-actions/.github/workflows/codeql.yml@828adfecbcbfb909d30fb0bc66459626571a1035
+    uses: alexcatdad/ci-actions/.github/workflows/codeql.yml@515066dac791f5a1222cfc99be038c220980ce23
     with:
       languages: '["swift", "actions"]'
       swift-build-command: swift build

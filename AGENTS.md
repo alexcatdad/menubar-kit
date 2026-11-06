@@ -63,15 +63,16 @@ task format    # swift format format --in-place
 ```
 
 CI (`.github/workflows/validation.yml`) calls `alexcatdad/ci-actions` at a
-pinned commit: lint and build on pull requests, test and security on `main`
-and weekly, and CodeQL (`swift`, `actions`). `scripts/ci_setup.sh` selects
-Xcode and installs Task on the runner. CI validates only; it never tags or
-publishes.
+pinned commit: lint, build and test on pull requests, test and security on
+`main` and weekly, and CodeQL (`swift`, `actions`). The `main` ruleset requires
+`pr / leaks`, `pr / lint`, `pr / build`, `pr / deps`, plus the code-scanning
+rule (`codeql / <lang>` checks). `scripts/ci_setup.sh` selects Xcode and
+installs Task on the runner. CI validates only; it never tags or publishes.
 
 `UNUserNotificationCenter` needs a real app bundle, so tests drive
 `MenubarNotifier` through a fake `NotificationCenterClient`. SwiftUI views are
-verified by building and by adopting them in an app; describe visual changes
-in the PR.
+rendered offscreen in `ViewRenderTests` and verified by adopting them in an
+app; describe visual changes in the PR.
 
 ## Release
 
