@@ -411,3 +411,40 @@ public struct VersionFooter: View {
             .padding(.horizontal, 10)
     }
 }
+
+/// The scrolling list for inside `MenubarPanel`: as tall as its content, up to
+/// `maxHeight`, then it scrolls.
+///
+/// Use it instead of `ScrollView { … }.frame(maxHeight:)`. A `MenuBarExtra`
+/// window can propose a minimal height, and a scroll view bounded only by a
+/// maximum then collapses to nearly nothing. This view measures its content
+/// and sets an explicit height, so the proposed size cannot shrink it.
+public struct BoundedScrollView<Content: View>: View {
+    private let maxHeight: CGFloat
+    private let content: Content
+    @State private var contentHeight: CGFloat = 0
+
+    public init(maxHeight: CGFloat, @ViewBuilder content: () -> Content) {
+        self.maxHeight = maxHeight
+        self.content = content()
+    }
+
+    public var body: some View {
+        ScrollView {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    contentHeight = $0
+                }
+        }
+        .frame(height: Self.height(content: contentHeight, maxHeight: maxHeight))
+    }
+
+    /// The content height, capped at `maxHeight`. Before the first
+    /// measurement the full `maxHeight` is reserved, never zero.
+    nonisolated static func height(content: CGFloat, maxHeight: CGFloat) -> CGFloat {
+        content > 0 ? min(content, maxHeight) : maxHeight
+    }
+}
