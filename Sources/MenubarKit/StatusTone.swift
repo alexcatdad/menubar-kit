@@ -65,8 +65,13 @@ public struct MenubarStatusRow: Equatable, Hashable, Sendable, Identifiable {
     }
 }
 
-/// Formats an app version for the panel footer: `1.2.3` or `1.2.3 (45)`.
-/// The build number is omitted when missing, empty or equal to the version.
+/// Formats an app version for the panel footer and About section.
+///
+/// The apps release with four-part CalVer tags (`2026.11.06.2`). Bundle
+/// versions allow only three parts, so builds pack the date (`2026.1106.2`).
+/// People see the release tag: `ReleaseVersion` from Info.plist when present,
+/// otherwise the packed bundle version unpacked again. The build number is
+/// shown only when it adds information.
 public enum VersionLabel {
     public static func format(version: String?, build: String?) -> String {
         let version = (version?.isEmpty == false ? version : nil) ?? "unknown"
@@ -74,10 +79,36 @@ public enum VersionLabel {
         return "\(version) (\(build))"
     }
 
-    /// The version label of `bundle` from `CFBundleShortVersionString` and `CFBundleVersion`.
+    /// The release version people see: `releaseVersion` when set, else the
+    /// unpacked CalVer bundle version, else `format(version:build:)`.
+    public static func release(releaseVersion: String?, shortVersion: String?, build: String?) -> String {
+        if let releaseVersion, !releaseVersion.isEmpty { return releaseVersion }
+        if let shortVersion, let unpacked = unpackedCalVer(shortVersion) {
+            let redundant = build == nil || build?.isEmpty == true || build == shortVersion
+            return redundant ? unpacked : format(version: unpacked, build: build)
+        }
+        return format(version: shortVersion, build: build)
+    }
+
+    /// `2026.1106.2` → `2026.11.06.2`; nil for anything that is not a packed
+    /// CalVer version (year, month and day, build).
+    public static func unpackedCalVer(_ packed: String) -> String? {
+        let parts = packed.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 3, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCII) && Int($0) != nil }),
+            parts[0].count == 4, (3...4).contains(parts[1].count),
+            let monthDay = Int(parts[1])
+        else { return nil }
+        let month = monthDay / 100, day = monthDay % 100
+        guard (1...12).contains(month), (1...31).contains(day) else { return nil }
+        return String(format: "%@.%02d.%02d.%@", parts[0], month, day, parts[2])
+    }
+
+    /// The version label of `bundle`: `ReleaseVersion`, `CFBundleShortVersionString`
+    /// and `CFBundleVersion` through `release(releaseVersion:shortVersion:build:)`.
     public static func of(_ bundle: Bundle) -> String {
-        format(
-            version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+        release(
+            releaseVersion: bundle.object(forInfoDictionaryKey: "ReleaseVersion") as? String,
+            shortVersion: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
             build: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         )
     }
