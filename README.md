@@ -253,3 +253,5 @@ task check   # lint, warnings-as-errors build, swift test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.
+
+<!-- docs-only CI test -->
